@@ -1,0 +1,459 @@
+config MEMFAULT
+    bool
+    default y
+    help
+      This symbol is used to provide a CONFIG_MEMFAULT symbol when compiling.
+      Normally the Memfault component is added at the cmake or idf_component.yml
+      level. If Memfault inclusion needs to be controlled at build time instead,
+      use the environment variable MEMFAULT_DISABLE=1 when building to control
+      whether the Memfault component is included or not.
+
+if MEMFAULT
+
+menu "Memfault"
+
+    config MEMFAULT_PROJECT_KEY
+        string "Memfault Project key"
+        default ""
+        help
+          API Key needed to communicate to Memfault. Obtain key at https://mflt.io/project-key
+
+    config MEMFAULT_EVENT_STORAGE_RAM_SIZE
+        int "The amount of RAM storage to reserve for Memfault Events"
+        default 512
+
+    config MEMFAULT_LOG_STORAGE_RAM_SIZE
+        int "The amount of RAM storage to allocate for log storage"
+        default 1024
+        help
+            Logs stored in this buffer will be captured as part of a Memfault Coredump
+
+    config MEMFAULT_METRICS_LOGS_ENABLE
+        bool "Enable collection of metrics for log message counts"
+        default y
+        help
+          When enabled, Memfault will collect metrics for log messages.
+          This can be useful for tracking the number of logs generated
+          by the system.
+
+    config MEMFAULT_CLI_ENABLED
+        bool "Enables the Memfault CLI"
+        default y
+        help
+            By default, Memfault will register CLI commands for pushing data,
+            dumping state of the SDK, and performing device updates.
+
+    config MEMFAULT_CLI_SELF_TEST
+        bool "Enables the self test command via CLI, `memfault_self_test`"
+        default n
+        depends on MEMFAULT_CLI_ENABLED
+        help
+            Adds a command, `memfault_self_test`, to run a suite of tests used to verify the
+            device's integration with the Memfault SDK. By default, this will run tests to validate
+            device info, component boot, coredump regions, coredump storage capacity, data export,
+            and platform time. A reboot test is available by running `memfault_self_test reboot`
+
+if MEMFAULT_CLI_SELF_TEST
+
+    config MEMFAULT_CLI_SELF_TEST_COREDUMP_STORAGE
+        bool "Adds option to run coredump storage test [EXPERIMENTAL]"
+        depends on !BOOTLOADER_WDT_DISABLE_IN_USER_CODE
+        depends on !ESP_INT_WDT
+        depends on !ESP_TASK_WDT_EN
+        help
+            Enabling this option adds an experimental coredump storage test.
+            The test exercises the coredump storage implementation by erasing, reading,
+            and writing the entire coredump partition. This test may fail due to Flash
+            cache issues. The test requires disabling the three watchdogs (RTC, INT, Task)
+            and will stall the other core while running.
+            This test may be run with `memfault_self_test coredump_storage`.
+
+endif
+
+    config MEMFAULT_COREDUMP_USE_OTA_SLOT
+        bool "Enables the use of an OTA slot for coredump storage"
+        default n
+        help
+            By default, Memfault will attempt to use a coredump partition
+            defined in a partitions*.csv file. If the device has already
+            been shipped and the partition table cannot be modified, an
+            OTA slot can be used instead.
+
+    config MEMFAULT_COREDUMP_STORAGE_WRITE_OFFSET_SECTORS
+        int "Write coredumps starting at this offset (in sectors)"
+        default 0
+        help
+            By default, Memfault will write coredumps starting at the beginning
+            of the coredump partition. If the device has a bootloader that
+            reserves space at the beginning of the partition, this option can
+            be used to write coredumps starting at a different offset. The full
+            partition will still be erased when invalidating a coredump.
+
+    config MEMFAULT_COREDUMP_STORAGE_MAX_SIZE
+        int "The maximum size of a coredump (0=partition max size)"
+        default 0
+        help
+            The maximum size of a coredump. If a coredump is larger than this
+            size, it will be truncated to this size. Must be aligned to
+            SPI_FLASH_SEC_SIZE. When set to =0 (the default), Memfault will
+            attempt to capture the entire RAM region of the device, up to the
+            maximum size of the `coredump` region. If it's desirable to
+            artificially reduce the utilized space in the `coredump` partition,
+            setting a non-zero value will cause the Memfault ESP-IDF port's
+            'memfault_platform_coredump_storage_get_info()' function to return
+            the threshold value set here as the size of the partition..
+
+    config MEMFAULT_COREDUMP_CPU_COUNT
+        int "Number of CPU cores to include in coredumps"
+        default SOC_CPU_CORES_NUM
+        # Symbolic values in the range are not supported by
+        # confgen.py/esp-idf-kconfig until later versions (esp-idf 5+). Hard
+        # code to a max of 2.
+        range 1 2
+        help
+            The number of CPU cores to include in coredumps. By default, all
+            cores are included.
+
+    config MEMFAULT_AUTOMATIC_INIT
+        bool "[DEPRECATED] Automatically initialize the SDK when the system is booted"
+        default n
+        help
+            By default, the user is required to initialize the SDK by calling
+            `memfault_boot`. This option is deprecated and not supported.
+            A build error will be generated when enabling this option.
+
+    menu "Builtin device info implementation"
+
+    config MEMFAULT_DEFAULT_GET_DEVICE_INFO
+        bool "Enables the default memfault_platform_get_device_info() implementation"
+        default y
+        help
+            Enable a default implementation of
+            memfault_platform_get_device_info(). Disable this config to
+            implement a custom version of the function.
+
+    config MEMFAULT_DEVICE_INFO_HARDWARE_VERSION
+        string "Hardware version used in memfault_esp_port_get_device_info()"
+        default "$(IDF_TARGET)-proto"
+
+    config MEMFAULT_DEVICE_INFO_SOFTWARE_VERSION
+        string "Software version used in memfault_esp_port_get_device_info()"
+        default "0.0.0"
+
+    config MEMFAULT_DEVICE_INFO_SOFTWARE_TYPE
+        string "Software type used in memfault_esp_port_get_device_info()"
+        default "esp32-main"
+
+    endmenu  # Builtin device info implementation
+
+    config MEMFAULT_PLATFORM_CONFIG_FILE
+        string "Name of the Memfault platform config file"
+        default "memfault_platform_config.h"
+        help
+            The name of the file which contains the Memfault platform config
+            options. This file must be included in the project's include path.
+
+    config MEMFAULT_METRICS_HEARTBEAT_INTERVAL_SECS
+        int "The interval in seconds between heartbeats"
+        default 3600
+        help
+            The interval in seconds between heartbeat metrics tallying.
+
+    config MEMFAULT_PLATFORM_METRICS_CONNECTIVITY_BOOT
+        bool "Initialize platform-specific connectivity metrics on system init"
+        default y
+        depends on MEMFAULT_METRICS_CONNECTIVITY_CONNECTED_TIME
+        help
+          When enabled, memfault_metrics_boot() will call a platform-implemented
+          memfault_platform_metrics_connectivity_boot() function. If not already
+          implemented for the user's platform, the user must supply their own implementation.
+          This function is typically used to register event handlers to that will mark
+          the connectivity state changes when the device connects and disconnects.
+          Marking these state changes is required to calculate the connectivity time metrics.
+
+    config MEMFAULT_USER_CONFIG_SILENT_FAIL
+        bool "Continue with build even if user configuration of Memfault SDK is missing"
+        default y
+        help
+          When enabled, __has_include is used to conditionally include the three Memfault
+          configuration files to a port if they exist instead of failing to compile if
+          they do not:
+          memfault_platform_config.h
+          memfault_metrics_heartbeat_config.def
+          memfault_trace_reason_user_config.def
+
+    config MEMFAULT_HTTP_CLIENT_TIMEOUT_MS
+        int "The HTTP client timeout in milliseconds"
+        default 5000
+        help
+            The Memfault HTTP client timeout in milliseconds. This is the
+            maximum amount of time the HTTP client will wait for a response from
+            the server.
+
+    config MEMFAULT_LWIP_METRICS
+        bool "Collect TCP/UDP metrics from LwIP"
+        default y
+        select LWIP_STATS
+
+    config MEMFAULT_FREERTOS_TASK_RUNTIME_STATS
+        bool "Enables the collection of freeRTOS task runtime stats as Memfault metrics"
+        default y
+        select FREERTOS_GENERATE_RUN_TIME_STATS
+        help
+            Collects the CPU usage as a percentage of total runtime.
+            This metric is only available when using esp_timer for runtime stats to
+            avoid issues with counter overflow. Note for FreeRTOS versions < 10.2.0
+            this will be a no-op.
+
+    config MEMFAULT_FREERTOS_RUNTIME_STATS_MULTI_CORE_SPLIT
+        bool "Enables per-core cpu_usage_pct metrics for multi-core targets"
+        default y
+        depends on MEMFAULT_FREERTOS_TASK_RUNTIME_STATS
+        depends on SOC_CPU_CORES_NUM > 1
+        help
+            When enabled, collects a separate measure of each CPU core usage as
+            cpu_usage_pct for cpu0 and cpu1_usage_pct for cpu1
+
+    config MEMFAULT_MBEDTLS_METRICS
+        bool "Collect metrics from mbedTLS"
+        default y
+        depends on ESP_TLS_USING_MBEDTLS && !MBEDTLS_CUSTOM_MEM_ALLOC
+        help
+            Collects metrics measuring current and maximum bytes allocated on the heap
+            during the current heartbeat interval.
+
+    config MEMFAULT_ESP_WIFI_METRICS
+        bool "Collect metrics from ESP WiFi"
+        default y
+        help
+            Collects Memfault metrics measuring the minimum RSSI, time connected to
+            WiFi, and the number of WiFi disconnects.
+
+    config MEMFAULT_ESP_WIFI_CONNECTIVITY_TIME_METRICS
+        bool "Enable Memfault Core Metric: connectivity_connected_time"
+        default y
+        depends on MEMFAULT_ESP_WIFI_METRICS && MEMFAULT_METRICS_CONNECTIVITY_CONNECTED_TIME
+        help
+            Collects the core metric for connectivity_connected_time based on
+            WiFi connection state.
+
+    config MEMFAULT_METRICS_CPU_TEMP
+        bool "Enable collection of a temperature metric"
+        default y
+        depends on !IDF_TARGET_ESP32 && !ENABLE_ARDUINO_DEPENDS
+        help
+            Collects a Memfault metric for the CPU die temperature.
+
+    config MEMFAULT_METRICS_MEMORY_USAGE
+        bool "Enable collection of memory usage metrics"
+        default y
+        help
+            Collects Memfault metrics for memory usage stats.
+
+    config MEMFAULT_METRICS_SYNC_SUCCESS
+            bool "Enable collection of sync success metrics"
+            default y
+            help
+             Memfault user-defined sync success metric component. More information
+             at https://mflt.io/core-metrics .
+
+    config MEMFAULT_METRICS_MEMFAULT_SYNC_SUCCESS
+            bool "Enable collection of memfault sync success metrics"
+            default y
+            help
+             Collects Memfault metrics for the number of successful and failed
+             syncs to the Memfault cloud. More information at
+             https://mflt.io/core-metrics .
+
+    config MEMFAULT_METRICS_CONNECTIVITY_CONNECTED_TIME
+            bool "Enable collection of memfault connectivity time metrics"
+            default y
+            help
+             Memfault connectivity time metric component. More information at
+             https://mflt.io/core-metrics .
+
+    config MEMFAULT_METRICS_BATTERY_ENABLE
+           bool "Enable collection of battery metrics"
+           default n
+           help
+             Memfault battery metric component. More information at
+             https://mflt.io/core-metrics .
+
+    config MEMFAULT_ASSERT_ON_ALLOC_FAILURE
+        bool "Assert on allocation failure"
+        default n
+        depends on !HEAP_ABORT_WHEN_ALLOCATION_FAILS
+        help
+            When enabled, the Memfault SDK will assert if any allocation fails.
+            This can be useful for tracking down heap memory issues. Note that
+            this operates similarly to HEAP_ABORT_WHEN_ALLOCATION_FAILS, but the
+            Memfault Issue created will be tagged as "Out of Memory" instead of
+            a generic "Assert".
+
+    config MEMFAULT_HEAP_STATS
+        bool "Heap tracing"
+        default y
+        imply HEAP_USE_HOOKS
+        # HEAP_TRACING instruments malloc/free calls using the same -Wl,--wrap
+        # approach, and is incompatible.
+        depends on !HEAP_TRACING
+        help
+          When enabled, system heap stats are captured as part of the coredump.
+          The heap stats subsystem collects info on basic heap
+          allocation/deallocation (malloc/free). If CONFIG_HEAP_USE_HOOKS is not
+          set, the blocks-in-use count will not be included.
+
+    config MEMFAULT_HEAP_STATS_MAX_COUNT
+        int "Maximum number of heap allocations to track"
+        default 32
+        depends on MEMFAULT_HEAP_STATS
+        help
+          The maximum number of heap allocations to track. When the number of
+          allocations exceeds this value, the oldest allocation is removed.
+
+    config MEMFAULT_HEAP_STATS_CALLOC
+        bool "Enable calloc tracking"
+        default n
+        depends on MEMFAULT_HEAP_STATS
+        help
+          When enabled, calloc tracking is enabled in addition to malloc. Some
+          ESP-IDF libraries use calloc heavily, and can consume the available
+          heap tracking bookkeeping space quickly.
+
+    config MEMFAULT_REBOOT_REASON_CUSTOM_ENABLE
+        bool "Enable custom reboot reasons"
+        default n
+        help
+            Enable the ability to define custom reboot reasons. This is useful
+            for tracking down the root cause of a reboot when it is not supported
+            by the default set of reboot reasons.
+
+    config MEMFAULT_COMPACT_LOG_ENABLE
+        bool "Enable compact logging"
+        default n
+        help
+            When enabled, the Memfault SDK will use a compact representation
+            for log messages written using the 'MEMFAULT_LOG_x' macros. Find more
+            information here: https://mflt.io/compact-logs
+
+    config MEMFAULT_LOG_USE_VPRINTF_HOOK
+        bool "Hook into ESP-IDF logging with esp_log_set_vprintf to send logs to Memfault"
+        default y
+        help
+            ESP-IDF logging provides a hook, `esp_log_set_vprintf()`, to redirect logs to a handler
+            parameter. Enabling this config will call this function automatically in `memfault_boot()`.
+            Disabling this config allows your application to use this hook instead.
+
+    config MEMFAULT_WRAP_EVENT_LOOP_CREATE_DEFAULT
+        bool "Wrap esp_event_loop_create_default() to suppress ESP_ERR_INVALID_STATE errors"
+        default y
+        help
+            `esp_event_loop_create_default()` returns `ESP_ERR_INVALID_STATE` when called multiple times.
+            This behavior can cause issues when used with `ESP_ERROR_CHECK()`. This option enables a
+            wrapped version to suppress these errors and prevent crashes.
+
+    config MEMFAULT_USE_MEMFAULT_BUILD_ID
+        bool "Automatically insert Memfault Build ID"
+        default y
+        help
+            Automatically insert the Memfault Build ID during the build process.
+
+    config MEMFAULT_ENABLE_REBOOT_DIAG_DUMP
+        bool "Pretty print reboot reason on boot"
+        default n
+        help
+            Print out the reboot reason, eg "Watchdog", on boot. Adds a few
+            hundred bytes of code space.
+
+    # HTTPS Periodic Upload
+    menuconfig MEMFAULT_HTTP_PERIODIC_UPLOAD
+        bool "Enable a dedicated thread to periodically upload Memfault data over HTTPS"
+        default n
+        depends on ESP_HTTP_CLIENT_ENABLE_HTTPS
+
+    if MEMFAULT_HTTP_PERIODIC_UPLOAD
+
+        choice MEMFAULT_HTTP_PERIODIC_UPLOAD_TASK_TYPE
+            prompt "Select task type to create for HTTP periodic upload"
+            # SUPPORT_STATIC_ALLOCATION renamed to FREERTOS_SUPPORT_STATIC_ALLOCATION in 4.0.0
+            default MEMFAULT_HTTP_PERIODIC_UPLOAD_TASK_STATIC
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_TASK_STATIC
+            bool "Static memory"
+            depends on (FREERTOS_SUPPORT_STATIC_ALLOCATION || SUPPORT_STATIC_ALLOCATION)
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_TASK_DYNAMIC
+            bool "Dynamic memory"
+
+        endchoice
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_STACK_SIZE
+            int "Stack size for periodic upload task"
+            default 4096
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_PRIORITY
+            int "Priority of periodic upload task"
+            default 1
+            range 1 25
+            help
+                Set periority of HTTP periodic upload task. Defaults to low
+                priority but can be increased if needed up to
+                configMAX_PRIORITIES - 1
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_AUTO_START
+            bool "Start the periodic upload task when memfault_boot() is called"
+            default y
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_INTERVAL_SECS
+            int "Periodic upload interval to send data in seconds"
+            default 3600
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_LOGS
+            bool "Upload log buffer in addition to other data"
+            default n
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_OTA
+            bool "Execute OTA during periodic HTTP check-in"
+            default n
+            help
+                When enabled, the device will check for an OTA update during
+                the periodic HTTP check-in. If an update is available, it will
+                be downloaded and installed. For more details and options, see
+                "memfault/esp_port/http_client.h" in the Memfault SDK.
+
+        config MEMFAULT_HTTP_PERIODIC_UPLOAD_OTA_CUSTOM_CBS
+            bool "Use custom OTA callbacks"
+            default n
+            depends on MEMFAULT_HTTP_PERIODIC_UPLOAD_OTA
+            help
+                When enabled, the user can provide custom callbacks to be
+                executed during the OTA process by defining
+                g_memfault_ota_update_handler.
+
+    endif  # MEMFAULT_HTTP_PERIODIC_UPLOAD
+
+    config MEMFAULT_USE_NTP
+        bool "Use NTP to set the system time"
+        default y
+        help
+            When enabled, the Memfault SDK will use NTP to set the system time.
+            This is used for timestamping events on device. Disable this config to
+            use a custom time syncing method.
+
+    config MEMFAULT_NTP_SERVER
+        string "NTP server to use"
+        default "pool.ntp.org"
+        depends on MEMFAULT_USE_NTP
+        help
+            The NTP server to use for setting the system time.
+
+    config MEMFAULT_SYSTEM_TIME
+        bool "Use system time for event timestamps"
+        default y
+        help
+            When enabled, the Memfault SDK will timestamp events with the
+            on-device system time, `time()`.
+
+endmenu
+
+endif  # !MEMFAULT_DISABLE

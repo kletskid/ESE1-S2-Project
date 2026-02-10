@@ -1,0 +1,108 @@
+menu "Memfault App Configuration"
+
+config STORE_HISTORY
+    bool "Store command history in flash"
+    default n
+    help
+        Linenoise line editing library provides functions to save and load
+        command history. If this option is enabled, initializes a FAT filesystem
+        and uses it to store command history.
+        Note that this adds a ~22kB heap allocation on system boot.
+
+config MEMFAULT_APP_WIFI_AUTOJOIN
+    bool "Enable automatic WiFi connection"
+    default y
+    depends on MEMFAULT
+    help
+        Automatically join if credentials are configured.
+
+config MEMFAULT_APP_HEAP_TRACING
+    bool "Print allocation tracing information at runtime"
+    default n
+    depends on HEAP_USE_HOOKS
+
+choice APP_MEMFAULT_TRANSPORT
+    prompt "Protocol to send chunks over"
+    default APP_MEMFAULT_TRANSPORT_HTTP
+
+    config APP_MEMFAULT_TRANSPORT_HTTP
+        bool "HTTP"
+    config APP_MEMFAULT_TRANSPORT_MQTT
+        bool "MQTT"
+        select MQTT_PROTOCOL_5
+        depends on !MEMFAULT_HTTP_PERIODIC_UPLOAD
+endchoice
+
+if APP_MEMFAULT_TRANSPORT_MQTT
+config MEMFAULT_DEVICE_INFO_SOFTWARE_TYPE
+    string "Override default software version for the application"
+    default "esp32-main-mqtt"
+endif
+
+# These LED settings are taken from ESP-IDF:
+# examples/get-started/blink/main/blink_example_main.c
+
+choice BLINK_LED
+    prompt "Blink LED type"
+    default BLINK_LED_GPIO if IDF_TARGET_ESP32 || !SOC_RMT_SUPPORTED
+    default BLINK_LED_RMT
+    help
+        Defines the default peripheral for blink example
+
+    config BLINK_LED_GPIO
+        bool "GPIO"
+    config BLINK_LED_RMT
+        bool "RMT - Addressable LED"
+endchoice
+
+config BLINK_LED_RMT_CHANNEL
+    depends on BLINK_LED_RMT
+    int "RMT Channel"
+    range 0 7
+    default 0
+    help
+        Note: this is only used if ESP-IDF version is < 5.0. See led.c.
+        Set the RMT peripheral channel.
+        ESP32 RMT channel from 0 to 7
+        ESP32-S2 RMT channel from 0 to 3
+        ESP32-S3 RMT channel from 0 to 3
+        ESP32-C3 RMT channel from 0 to 1
+
+config BLINK_GPIO
+    int "Blink GPIO number"
+    range 0 48
+    default 5 if IDF_TARGET_ESP32
+    default 18 if IDF_TARGET_ESP32S2
+    default 48 if IDF_TARGET_ESP32S3
+    default 8
+    help
+        GPIO number (IOxx) to blink on and off or the RMT signal for the addressable LED.
+        Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+config BUTTON_GPIO
+    int "Input pin for the EN button on the dev board"
+    # https://dl.espressif.com/dl/schematics/esp32_devkitc_v4_sch.pdf
+    # https://dl.espressif.com/dl/schematics/esp-idf/SCH_ESP32-S2-DEVKITC-1_V1_20220817.pdf
+    # https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-DevKitC-1_V1.1_20221130.pdf
+    default 0 if IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+    # https://dl.espressif.com/dl/schematics/SCH_ESP32-C3-DEVKITC-02_V1_1_20210126A.pdf
+    # https://dl.espressif.com/dl/schematics/SCH_ESP32-C3-DEVKITM-1_V1_20200915A.pdf
+    # https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-c6-devkitc-1/schematics/esp32-c6-devkitc-1-schematics_v1.4.pdf
+    default 9 if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C6
+    default 0
+    help
+        GPIO pin number for the BOOT button. Used to trigger a crash for testing.
+
+
+# esp32c3/c6 specific settings
+if IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C6
+    # Default optimize for size due to increase in binary size
+    # This can be changed in root -> Compiler Options
+    # The choice and prompt lines are required and must match the esp-idf definition
+    choice COMPILER_OPTIMIZATION
+        prompt "Optimization Level"
+        default COMPILER_OPTIMIZATION_SIZE
+    endchoice
+endif
+
+endmenu

@@ -1,0 +1,93 @@
+//! @file
+
+#include "memfault/ports/zephyr/version.h"
+
+#if defined(CONFIG_MEMFAULT_METRICS_DEFAULT_SET_ENABLE)
+
+  #if defined(CONFIG_THREAD_STACK_INFO)
+MEMFAULT_METRICS_KEY_DEFINE(TimerTaskFreeStack, kMemfaultMetricType_Unsigned)
+  #endif
+
+  #if defined(CONFIG_THREAD_RUNTIME_STATS)
+
+  // stats.total_cycles added in Zephyr 3.0
+  #if MEMFAULT_ZEPHYR_VERSION_GTE_STRICT(3, 0)
+// Two decimal places of precision
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(cpu_usage_pct, kMemfaultMetricType_Unsigned, 100)
+  #endif  // MEMFAULT_ZEPHYR_VERSION_GT(3, 0)
+
+MEMFAULT_METRICS_KEY_DEFINE(TimerTaskCpuUsage, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(AllTasksCpuUsage, kMemfaultMetricType_Unsigned)
+  #endif
+
+  #if defined(CONFIG_MEMFAULT_FS_BYTES_FREE_METRIC)
+MEMFAULT_METRICS_KEY_DEFINE(FileSystem_BytesFree, kMemfaultMetricType_Unsigned)
+  #endif
+
+#endif  // defined(CONFIG_MEMFAULT_METRICS_DEFAULT_SET_ENABLE)
+
+#if defined(CONFIG_MEMFAULT_METRICS_TCP_IP)
+  // save the most interesting stats as metrics, and reset the stats structure
+  #if defined(CONFIG_NET_STATISTICS_UDP)
+MEMFAULT_METRICS_KEY_DEFINE(net_udp_recv, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(net_udp_sent, kMemfaultMetricType_Unsigned)
+  #endif  // defined(CONFIG_NET_STATISTICS_UDP)
+  #if defined(CONFIG_NET_STATISTICS_TCP)
+MEMFAULT_METRICS_KEY_DEFINE(net_tcp_recv, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(net_tcp_sent, kMemfaultMetricType_Unsigned)
+  #endif  // defined(CONFIG_NET_STATISTICS_TCP)
+
+MEMFAULT_METRICS_KEY_DEFINE(net_bytes_received, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(net_bytes_sent, kMemfaultMetricType_Unsigned)
+#endif  // defined(CONFIG_MEMFAULT_METRICS_TCP_IP)
+
+#if defined(CONFIG_MEMFAULT_METRICS_WIFI)
+MEMFAULT_METRICS_KEY_DEFINE(wifi_connected_time_ms, kMemfaultMetricType_Timer)
+// MEMFAULT_METRICS_KEY_DEFINE(wifi_sta_min_rssi, kMemfaultMetricType_Signed)
+MEMFAULT_METRICS_KEY_DEFINE(wifi_disconnect_count, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_STRING_KEY_DEFINE(wifi_ap_oui, sizeof("00:00:00") - 1)
+#endif  // defined(CONFIG_MEMFAULT_METRICS_WIFI)
+
+#if defined(CONFIG_MEMFAULT_METRICS_CPU_TEMP)
+// One decimal place of precision
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(thermal_cpu_c, kMemfaultMetricType_Signed, 10)
+#endif
+
+#if defined(CONFIG_MEMFAULT_METRICS_MEMORY_USAGE)
+
+  #if MEMFAULT_ZEPHYR_VERSION_GT(3, 0)
+// Two decimal places of precision
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_pct_max, kMemfaultMetricType_Unsigned, 100)
+  #endif // MEMFAULT_ZEPHYR_VERSION_GT(3, 0)
+
+MEMFAULT_METRICS_KEY_DEFINE(Heap_BytesFree, kMemfaultMetricType_Unsigned)
+#endif
+
+#if defined(CONFIG_MEMFAULT_METRICS_THREADS_DEFAULTS)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_idle_pct_max, kMemfaultMetricType_Unsigned,
+                                             CONFIG_MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_sysworkq_pct_max, kMemfaultMetricType_Unsigned,
+                                             CONFIG_MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+#endif  // defined(CONFIG_MEMFAULT_METRICS_THREADS_DEFAULTS)
+
+#if defined(CONFIG_MEMFAULT_METRICS_EXTRA_DEFS_FILE)
+  #include "memfault_metrics_heartbeat_extra.def"
+#endif
+
+// Pull in the user's heartbeat defs
+#if defined(CONFIG_MEMFAULT_USER_CONFIG_ENABLE)
+
+  #if defined(CONFIG_MEMFAULT_USER_CONFIG_SILENT_FAIL)
+
+    #if __has_include("memfault_metrics_heartbeat_config.def")
+      #include "memfault_metrics_heartbeat_config.def"
+    #endif
+
+  #else
+
+    #include "memfault_metrics_heartbeat_config.def"
+
+  #endif  // defined(CONFIG_MEMFAULT_USER_CONFIG_SILENT_FAIL)
+
+#endif

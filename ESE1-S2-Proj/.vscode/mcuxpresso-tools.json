@@ -1,0 +1,16 @@
+{
+  "version": "25.3",
+  "toolchainPath": "/Users/cj/.mcuxpressotools/arm-gnu-toolchain-14.2.rel1-darwin-arm64-arm-none-eabi",
+  "linkedProjects": [],
+  "trustZoneType": "none",
+  "multicoreType": "none",
+  "projectType": "sdk-v2-freestanding",
+  "projectName": "ESE1-S2-Proj",
+  "sdk": {
+    "version": "25.12.0",
+    "path": "/Users/cj/Documents/Code/ESE-S2-Proj/sdks/ESE1-S2-Proj_sdk",
+    "boardId": "frdmmcxa153",
+    "deviceId": "MCXA153",
+    "coreId": "cm33_core0"
+  }
+}

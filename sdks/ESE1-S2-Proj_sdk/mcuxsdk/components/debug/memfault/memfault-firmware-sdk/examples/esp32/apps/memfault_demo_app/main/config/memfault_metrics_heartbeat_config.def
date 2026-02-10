@@ -1,0 +1,65 @@
+#include "sdkconfig.h"
+
+// File for holding custom metrics:
+//   https://mflt.io/embedded-metrics
+MEMFAULT_METRICS_KEY_DEFINE(ota_check_count, kMemfaultMetricType_Unsigned)
+
+#if defined(CONFIG_APP_MEMFAULT_TRANSPORT_MQTT)
+MEMFAULT_METRICS_KEY_DEFINE(mqtt_publish_bytes, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(mqtt_publish_count, kMemfaultMetricType_Unsigned)
+MEMFAULT_METRICS_KEY_DEFINE(mqtt_conn_downtime, kMemfaultMetricType_Timer)
+MEMFAULT_METRICS_KEY_DEFINE(mqtt_conn_uptime, kMemfaultMetricType_Timer)
+#endif
+
+// OTA session metrics
+MEMFAULT_METRICS_SESSION_KEY_DEFINE(ota)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SESSION(ota_error_code, kMemfaultMetricType_Signed, ota)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SESSION(ota_wifi_rssi, kMemfaultMetricType_Signed, ota)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SESSION(ota_tcp_tx_count, kMemfaultMetricType_Unsigned, ota)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SESSION(ota_tcp_rx_count, kMemfaultMetricType_Unsigned, ota)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SESSION(ota_tls_sent_bytes, kMemfaultMetricType_Unsigned, ota)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SESSION(ota_tls_recv_bytes, kMemfaultMetricType_Unsigned, ota)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SESSION(ota_mbedtls_mem_max_bytes, kMemfaultMetricType_Unsigned,
+                                         ota)
+
+// Thread stack usage metrics.
+// Note: We test this application in CI in a "zero-config" form, by removing
+// memfault_platform_config.h. This enables the default set of thread metrics,
+// so to avoid a name conflict, don't enable them here.
+#if !MEMFAULT_METRICS_THREADS_DEFAULTS
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_main_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_idle0_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+  #if !defined(CONFIG_FREERTOS_UNICORE)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_idle1_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+  #endif
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_example_task_pct_max,
+                                             kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_tit_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_mflt_periodic_u_pct_max,
+                                             kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_tmr_svc_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+  #if !defined(CONFIG_FREERTOS_UNICORE)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_ipc0_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_ipc1_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+  #endif
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_ota_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_sys_evt_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_wifi_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_esp_timer_pct_max, kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+MEMFAULT_METRICS_KEY_DEFINE_WITH_SCALE_VALUE(memory_overflow_task_pct_max,
+                                             kMemfaultMetricType_Unsigned,
+                                             MEMFAULT_METRICS_THREADS_MEMORY_SCALE_FACTOR)
+#endif  // !MEMFAULT_METRICS_THREADS_DEFAULTS
